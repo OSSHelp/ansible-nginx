@@ -1,0 +1,86 @@
+---
+- name: add stable ppa
+  apt_repository:
+    repo: 'ppa:nginx/stable'
+
+- name: install packages
+  apt:
+    name: "{{ nginx_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: service enabled check
+  service:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: remove default virtualhost
+  file:
+    dest: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx config
+
+- name: dir tasks
+  include_tasks: dirs.yml
+
+- name: ssl tasks
+  include_tasks: ssl.yml
+  when: nginx_ssl|bool
+
+- name: deploy nginx.conf
+  template:
+    src: nginx.j2
+    dest: "{{ conf_dir }}/nginx.conf"
+  notify: reload nginx config
+
+- name: ip2geo tasks
+  include_tasks: ip2geo.yml
+  when: ip2geo|bool
+
+- name: modules
+  include_tasks: modules.yml
+
+- name: limits conf deploy
+  include_tasks: limits.yml
+  when: limits|bool
+
+- name: default conf.d configs deploy
+  template:
+    src: conf.j2
+    dest: "{{ conf_dir }}/conf.d/{{ conf.name }}.conf"
+  notify: reload nginx config
+  vars:
+    conf: "{{ item }}"
+  loop: "{{ default_confd }}"
+
+- name: cond.d configs deploy
+  template:
+    src: conf.j2
+    dest: "{{ conf_dir }}/conf.d/{{ conf.name }}.conf"
+  notify: reload nginx config
+  vars:
+    conf: "{{ item }}"
+  loop: "{{ confd|default('[]') }}"
+
+- name: custom.d configs deploy
+  template:
+    src: conf.j2
+    dest: "{{ conf_dir }}/custom.d/{{ conf.name }}.conf"
+  notify: reload nginx config
+  vars:
+    conf: "{{ item }}"
+  loop: "{{ customd|default('[]') }}"
+
+- name: default vhosts deploy
+  include_tasks: vhost.yml
+  vars:
+    vhost: "{{ item }}"
+  loop: "{{ default_vhosts }}"
+
+- name: vhosts deploy
+  include_tasks: vhost.yml
+  vars:
+    vhost: "{{ item }}"
+  loop: "{{ vhosts|default('[]') }}"

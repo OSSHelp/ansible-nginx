@@ -1,0 +1,8 @@
+---
+- name: ip2geo conf deploy
+  template:
+    src: conf.j2
+    dest: "{{ conf_dir }}/conf.d/{{ conf.name }}.conf"
+  notify: reload nginx config
+  vars:
+    conf: "{{ ip2geo_conf }}"

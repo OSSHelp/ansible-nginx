@@ -1,0 +1,29 @@
+---
+- name: deploy {{ vhost.name }} vhost
+  template:
+    src: vhost.j2
+    dest: "{{ conf_dir }}/sites-available/{{ vhost.name }}"
+  notify: reload nginx config
+  when: vhost.enable|default(true) and not vhost.absent|default(false)
+
+- name: enable {{ vhost.name }} vhost
+  file:
+    dest: "{{ conf_dir }}/sites-enabled/{{ vhost.name }}"
+    src: "{{ conf_dir }}/sites-available/{{ vhost.name }}"
+    state: link
+  notify: reload nginx config
+  when: vhost.enable|default(true) and not vhost.absent|default(false) and not ansible_check_mode
+
+- name: disable {{ vhost.name }} vhost
+  file:
+    dest: "{{ conf_dir }}/sites-enabled/{{ vhost.name }}"
+    state: absent
+  notify: reload nginx config
+  when: not vhost.enable|default(true) or vhost.absent|default(false)
+
+- name: remove {{ vhost.name }} vhost
+  file:
+    dest: "{{ conf_dir }}/sites-available/{{ vhost.name }}"
+    state: absent
+  notify: reload nginx config
+  when: vhost.absent|default(false)

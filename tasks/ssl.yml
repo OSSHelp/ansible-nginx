@@ -1,0 +1,98 @@
+---
+- name: default conf.d ssl config deploy
+  template:
+    src: conf.j2
+    dest: "{{ conf_dir }}/conf.d/{{ conf.name }}.conf"
+  notify: reload nginx config
+  vars:
+    conf: "{{ item }}"
+  loop: "{{ default_confd_ssl }}"
+
+- name: setup ssl
+  block:
+    - name: generate dhparam
+      openssl_dhparam:
+        path: "{{ ssl_dir }}/dhparam.pem"
+        size: "{{ dhparm_bit }}"
+      when: nginx_ssl_configuration.dhparam is not defined
+
+    - name: create dhparam from variable
+      copy:
+        content: "{{ nginx_ssl_configuration.dhparam }}"
+        dest: "{{ ssl_dir }}/dhparam.pem"
+      when: nginx_ssl_configuration.dhparam is defined
+
+    - name: generate snakeoil key
+      openssl_privatekey:
+        path: "{{ ssl_dir }}/snakeoil.key"
+      when: nginx_ssl_configuration.snakeoil_key is not defined or nginx_ssl_configuration.snakeoil_crt is not defined
+
+    - name: create snakeoil key from variable
+      copy:
+        content: "{{ nginx_ssl_configuration.snakeoil_key }}"
+        dest: "{{ ssl_dir }}/snakeoil.key"
+      when: nginx_ssl_configuration.snakeoil_key is defined and nginx_ssl_configuration.snakeoil_crt is defined
+
+    - name: generate snakeoil csr
+      openssl_csr:
+        path: "{{ ssl_dir }}/snakeoil.csr"
+        privatekey_path: "{{ ssl_dir }}/snakeoil.key"
+        common_name: "{{ snakeoil.common_name }}"
+      when: nginx_ssl_configuration.snakeoil_key is not defined or nginx_ssl_configuration.snakeoil_crt is not defined
+
+    - name: generate snakeoil cert
+      openssl_certificate:
+        path: "{{ ssl_dir }}/snakeoil.pem"
+        privatekey_path: "{{ ssl_dir }}/snakeoil.key"
+        csr_path: "{{ ssl_dir }}/snakeoil.csr"
+        provider: selfsigned
+      when: nginx_ssl_configuration.snakeoil_key is not defined or nginx_ssl_configuration.snakeoil_crt is not defined
+
+    - name: create snakeoil cert from variable
+      copy:
+        content: "{{ nginx_ssl_configuration.snakeoil_crt }}"
+        dest: "{{ ssl_dir }}/snakeoil.pem"
+      when: nginx_ssl_configuration.snakeoil_key is defined and nginx_ssl_configuration.snakeoil_crt is defined
+
+    - name: validate snakeoil cert and key
+      block:
+        - name: collect snakeoil cert info
+          openssl_certificate_info:
+            path: "{{ ssl_dir }}/snakeoil.pem"
+          register: result_snakeoil_cert
+        - name: collect snakeoil key info
+          openssl_privatekey_info:
+            path: "{{ ssl_dir }}/snakeoil.key"
+          register: result_snakeoil_key
+        - name: check if snakeoil cert and key are valid
+          assert:
+            that:
+              - result_snakeoil_cert.public_key == result_snakeoil_key.public_key
+              - "result_snakeoil_cert.subject.commonName == 'localhost.localdomain'"
+      when: not snakeoil.disable_validation and not ansible_check_mode
+
+    - name: create keys
+      copy:
+        content: "{{ item.ssl.key }}"
+        dest: "{{ ssl_dir }}/{{ item.name }}.key"
+        mode: 0600
+      when: item.ssl.key is defined
+      loop: "{{ vhosts|default('[]') }}"
+      no_log: true
+
+    - name: create certs
+      copy:
+        content: "{{ item.ssl.cert }}"
+        dest: "{{ ssl_dir }}/{{ item.name }}.pem"
+      when: item.ssl.cert is defined
+      loop: "{{ vhosts|default('[]') }}"
+      no_log: true
+
+    - name: create trusted
+      copy:
+        content: "{{ item.ssl.trusted }}"
+        dest: "{{ ssl_dir }}/{{ item.name }}_trusted.pem"
+      when: item.ssl.trusted is defined
+      loop: "{{ vhosts|default('[]') }}"
+      no_log: true
+  when: not ansible_check_mode

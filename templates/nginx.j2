@@ -1,0 +1,27 @@
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+{% for param in global_params|default([]) %}  {{ param }}{{ ';' if param[-1] != ';' else '' }}
+{% endfor %}
+
+events {
+{% for param in default_events_params %}  {{ param }}{{ ';' if param[-1] != ';' else '' }}
+{% endfor %}
+{% for param in events_params|default([]) %}  {{ param }}{{ ';' if param[-1] != ';' else '' }}
+{% endfor %}
+}
+
+http {
+{% for param in default_http_params %}  {{ param }}{{ ';' if param[-1] != '}' and param[-1] != ';' else '' }}
+{% endfor %}
+
+{% for param in http_params|default([]) %}  {{ param }}{{ ';' if param[-1] != '}' and param[-1] != ';' else '' }}
+{% endfor %}
+
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  include {{ conf_dir }}/conf.d/*.conf;
+  include {{ conf_dir }}/sites-enabled/*;
+}

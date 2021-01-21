@@ -1,0 +1,11 @@
+---
+- name: "create {{ ssl_dir }} dir"
+  file:
+    path: "{{ ssl_dir }}"
+    state: directory
+  when: nginx_ssl|bool
+
+- name: "create {{ conf_dir }}/custom.d dir"
+  file:
+    path: "{{ conf_dir }}/custom.d"
+    state: directory

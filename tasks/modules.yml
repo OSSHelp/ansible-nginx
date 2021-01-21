@@ -1,0 +1,12 @@
+---
+- name: "install vts module"
+  apt:
+    deb: "{{ vts_module_package }}"
+  notify: reload nginx config
+  when: vts_module is defined and vts_module
+
+- name: "install pagespeed module"
+  apt:
+    deb: "{{ pagespeed_module_package }}"
+  notify: reload nginx config
+  when: pagespeed_module is defined and pagespeed_module

@@ -1,0 +1,49 @@
+{% if vhost.listen is not defined %}
+{% set vhost_listens = default_listens if not vhost.listen_ssl_only|default(false) else [] %}
+{% set vhost_listens = (vhost_listens + default_listens_ssl) if vhost.ssl is defined and nginx_ssl|bool else vhost_listens %}
+{% else %}
+{% set vhost_listens = vhost.listen %}
+{% endif %}
+server {
+
+{% for listen in vhost_listens %}
+  listen {{ listen }}{{ ' default_server' if vhost.default_server|default(false) else '' }};
+{% endfor%}
+
+{% if vhost.server_name is defined %}
+  server_name{% for server_name in vhost.server_name %} {{ server_name }}{% endfor %};
+
+{% endif %}
+{% if vhost.ssl is defined and nginx_ssl|bool %}
+  ssl_certificate {{ vhost.ssl.cert_path | default(ssl_dir ~ '/' ~ vhost.name ~ '.pem') }};
+  ssl_certificate_key {{ vhost.ssl.key_path | default(ssl_dir ~ '/' ~ vhost.name ~ '.key') }};
+{% if vhost.ssl.trusted is defined or vhost.ssl.trusted_path is defined %}  ssl_trusted_certificate {{ vhost.ssl.trusted_path | default(ssl_dir ~ '/' ~ vhost.name ~ '_trusted.pem') }};
+{% endif %}
+
+{% endif %}
+{% if vhost.access_log is defined %}  access_log {{ vhost.access_log.path | default(log_dir ~ '/' ~ vhost.name ~ '_access.log') }}{{ ' ' ~ vhost.access_log.format if vhost.access_log.format is defined else '' }}{{ ' ' ~ vhost.access_log.params if vhost.access_log.params is defined else '' }};
+{% endif %}{% if vhost.error_log is defined %}  error_log {{ vhost.error_log.path | default(log_dir ~ '/' ~ vhost.name ~ '_error.log') }}{{ ' ' ~ vhost.error_log.level if vhost.error_log.level is defined else '' }};
+{% endif %}
+
+{% if vhost.root is defined %}
+  root {{ vhost.root }};
+
+{% endif %}
+{% for param in vhost.params|default([]) %}  {{ param }}{{ ';' if param[-1] != '}' and param[-1] != ';' else '' }}
+{% endfor %}
+
+{% for rewrite in vhost.rewrites|default([]) %}  { rewrite }}{{ ';' if param[-1] != ';' else '' }}
+{% endfor %}
+
+{% for parent_location in vhost.locations|default([]) %}  location {{ parent_location.type | default('') }} {{ parent_location.uri }} {
+{% for param in parent_location.params|default([]) %}    {{ param }}{{ ';' if param[-1] != '}' and param[-1] != ';' else '' }}
+{% endfor %}
+{% for child_location in parent_location.locations|default([]) %}    location {{ child_location.type | default('') }} {{ child_location.uri }} {
+{% for param in child_location.params|default([]) %}      {{ param }}{{ ';' if param[-1] != '}' and param[-1] != ';' else '' }}
+{% endfor %}
+    }
+{% endfor %}
+  }
+
+{% endfor %}
+}

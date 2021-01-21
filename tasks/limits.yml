@@ -1,0 +1,63 @@
+---
+- name: create limit whitelist
+  set_fact:
+    merged_limit_whitelist: "{{ default_limit_whitelist + limit_whitelist|default([]) }}"
+
+- name: create limit host list
+  set_fact:
+    merged_limit_hosts: "{{ default_limit_hosts + limit_hosts|default([]) }}"
+
+- name: create limit uri list
+  set_fact:
+    merged_limit_uris: "{{ default_limit_uris + limit_uris|default([]) }}"
+
+- name: create limit referer list
+  set_fact:
+    merged_limit_referers: "{{ default_limit_referers + limit_referers|default([]) }}"
+
+- name: create limit UA list
+  set_fact:
+    merged_limit_uas: "{{ default_limit_uas + limit_uas|default([]) }}"
+
+- name: generate conf dict var
+  set_fact:
+    limits_conf:
+      name: limits
+      geos:
+        - var: $limit_whitelist
+          params: "{{ merged_limit_whitelist }}"
+      maps:
+        - var: $limit_host
+          src: $host
+          params: "{{ merged_limit_hosts }}"
+        - var: $limit_uri
+          src: $uri
+          params: "{{ merged_limit_uris }}"
+        - var: $limit_ua
+          src: $http_user_agent
+          params: "{{ merged_limit_uas }}"
+        - var: $limit_referer
+          src: $http_referer
+          params: "{{ merged_limit_referers }}"
+        - var: $limit_key_host
+          src: $limit_whitelist$limit_host$limit_uri$limit_ua$limit_referer
+          params:
+            - 01111 $host
+        - var: $limit_key_addr
+          src: $limit_whitelist$limit_host$limit_uri$limit_ua$limit_referer
+          params:
+            - 01111 $binary_remote_addr
+      params:
+        - limit_conn_zone "$limit_key_addr$limit_key_host" zone=global_conn:{{ limit_zone_size }}
+        - limit_req_zone "$limit_key_addr$limit_key_host" zone=global_req:{{ limit_zone_size }} rate={{ limit_zone_rate }}
+        - limit_conn global_conn {{ limit_conn }}
+        - limit_req zone=global_req burst={{ limit_req_burst }}{{ ' nodelay' if limit_req_nodelay else '' }}
+        - limit_req_status 429
+
+- name: limits conf deploy
+  template:
+    src: conf.j2
+    dest: "{{ conf_dir }}/conf.d/{{ conf.name }}.conf"
+  notify: reload nginx config
+  vars:
+    conf: "{{ limits_conf }}"

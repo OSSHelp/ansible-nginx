@@ -1,0 +1,170 @@
+---
+## todo
+#   - make default params overidable
+#   - add remove function for confs like for vhosts - absent param
+#   - remove default preinstalled virtualhost by default_vhosts list + absent param
+
+nginx_packages:
+  - nginx
+  - gnupg
+  - python-openssl
+  - python3-openssl
+
+vts_module_package: "https://oss.help/packages/pub/ubuntu/{{ ansible_distribution_release }}/libnginx-mod-http-vhost-traffic-status.deb"
+pagespeed_module_package: "https://oss.help/packages/pub/ubuntu/{{ ansible_distribution_release }}/libnginx-mod-pagespeed.deb"
+
+ipv6: true
+nginx_ssl: true
+dhparm_bit: 2048
+
+ip2geo: false
+ip2geo_mm_ipv4_path: /var/lib/ip2geo/mm_ipv4
+ip2geo_mm_ipv6_path: /var/lib/ip2geo/mm_ipv6
+
+limits: false
+limit_zone_size: 32m
+limit_zone_rate: 20r/m
+limit_conn: 8
+limit_req_burst: 10
+limit_req_nodelay: false
+
+conf_dir: /etc/nginx
+log_dir: /var/log/nginx
+ssl_dir: "{{ conf_dir }}/ssl"
+
+default_events_params:
+  - worker_connections 768
+default_http_params:
+  - sendfile on
+  - tcp_nopush on
+  - types_hash_max_size 2048
+  - server_tokens off
+
+snakeoil:
+  common_name: localhost.localdomain
+  disable_validation: false
+
+default_listens_ipv4:
+  - "80"
+default_listens_ipv4_ssl:
+  - "443 ssl http2"
+default_listens_ipv6:
+  - "[::]:80"
+default_listens_ipv6_ssl:
+  - "[::]:443 ssl http2"
+default_listens: "{{ (default_listens_ipv4 + default_listens_ipv6) if ipv6 else default_listens_ipv4 }}"
+default_listens_ssl: "{{ (default_listens_ipv4_ssl + default_listens_ipv6_ssl) if ipv6 else default_listens_ipv4_ssl }}"
+
+default_confd:
+  - name: logs
+    params:
+      - log_format geo '$remote_addr {{ "$country_code/$city/$tz" if ip2geo else "-" }} $remote_user [$time_local] "$request" $status/$upstream_status/$upstream_cache_status $request_time/$upstream_response_time $request_length/$body_bytes_sent "$http_referer" "$http_user_agent" $connection/$connection_requests'
+      - access_log {{ log_dir }}/access.log geo
+      - error_log {{ log_dir }}/error.log warn
+
+default_confd_ssl:
+  - name: ssl
+    params:
+      - ssl_session_timeout 1d
+      - ssl_session_cache shared:SSL:50m
+      - ssl_session_tickets off
+      - ssl_dhparam {{ ssl_dir }}/dhparam.pem
+      - ssl_protocols TLSv1 TLSv1.1 TLSv1.2
+      - ssl_ciphers 'ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS'
+      - ssl_prefer_server_ciphers on
+      - ssl_stapling on
+      - ssl_stapling_verify on
+      - resolver 8.8.8.8
+
+default_limit_whitelist:
+  - default 0
+  - 127.0.0.1/32 1
+
+default_limit_hosts:
+  - hostnames
+  - default 1
+  - .example.com 0
+
+default_limit_uris:
+  - default 1
+  - '~*\.(jpg|jpeg|gif|png|ico|webp|svg|bmp)$ 0'
+  - '~*\.(js|css)$ 0'
+  - '~*\.(ttf|woff\d?|eot)$ 0'
+  - '~*\.(js|css)$ 0'
+
+default_limit_uas:
+  - default 1
+  - OSSHelp/BlackboxExporter 0
+  - '~*Pingdom.com_bot 0'
+
+default_limit_referers:
+  - default 1
+
+default_vhosts:
+  - name: default-444
+    default_server: true
+    ssl:
+      cert_path: "{{ ssl_dir }}/snakeoil.pem"
+      key_path: "{{ ssl_dir }}/snakeoil.key"
+    access_log:
+      path: "off"
+    params:
+      - ssl_stapling off
+      - return 444
+  - name: status
+    server_name:
+      - localhost
+      - 127.0.0.1
+    access_log:
+      path: "off"
+    locations:
+      - uri: /
+        params:
+          - return 403
+      - uri: /nginx_status
+        params:
+          - allow 127.0.0.1/32
+          - allow ::1/128
+          - deny all
+          - stub_status on
+
+ip2geo_conf:
+  name: ip2geo
+  geos:
+    - var: $city_v4
+      params:
+        - ranges
+        - include {{ ip2geo_mm_ipv4_path }}/mm_city.txt
+    - var: $city_v6
+      params:
+        - "include {{ ip2geo_mm_ipv6_path }}/mm_city.txt"
+    - var: $country_code_v4
+      params:
+        - ranges
+        - include {{ ip2geo_mm_ipv4_path }}/mm_country_code.txt
+    - var: $country_code_v6
+      params:
+        - "include {{ ip2geo_mm_ipv6_path }}/mm_country_code.txt"
+    - var: $tz_v4
+      params:
+        - ranges
+        - include {{ ip2geo_mm_ipv4_path }}/mm_tz.txt
+    - var: $tz_v6
+      params:
+        - include {{ ip2geo_mm_ipv6_path }}/mm_tz.txt
+  maps:
+    - var: $city
+      src: $city_v4
+      params:
+        - default $city_v4
+        - '"" $city_v6'
+    - var: $country_code
+      src: $country_code_v4
+      params:
+        - default $country_code_v4
+        - '"" $country_code_v6'
+    - var: $tz
+      src: $tz_v4
+      params:
+        - default $tz_v4
+        - '"" $tz_v6'
