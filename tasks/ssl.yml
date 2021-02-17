@@ -22,6 +22,12 @@
         dest: "{{ ssl_dir }}/dhparam.pem"
       when: nginx_ssl_configuration.dhparam is defined
 
+    - name: create trusted.pem
+      copy:
+        content: "{{ nginx_ssl_configuration.trusted }}"
+        dest: "{{ ssl_dir }}/trusted.pem"
+      when: nginx_ssl_configuration.trusted is defined
+
     - name: generate snakeoil key
       openssl_privatekey:
         path: "{{ ssl_dir }}/snakeoil.key"

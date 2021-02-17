@@ -33,7 +33,7 @@ Installs Nginx plus configuration management.
       pagespeed_module: true
 ```
 
-### Nginx + dhparam and snakeoil key/cert from vault
+### Nginx + dhparam, trusted and snakeoil key/cert from vault
 
 ```yaml
 # vault
@@ -45,6 +45,16 @@ dhparam_variable_name_from_vault: |
   7VFhr7dducVP1VUekzy2cLtMsLLgPAWaywIBAg==
   -----END DH PARAMETERS-----
 
+trusted_variable_name_from_vault: |
+  -----BEGIN CERTIFICATE-----
+  (Your Primary SSL certificate: your_domain_name.crt)
+  -----END CERTIFICATE-----
+  -----BEGIN CERTIFICATE-----
+  (Your Intermediate certificate: Intermediate.crt)
+  -----END CERTIFICATE-----
+  -----BEGIN CERTIFICATE-----
+  (Your Root certificate: TrustedRoot.crt)
+  -----END CERTIFICATE-----
 
 snakeoil_key_variable_name_from_vault: |
   -----BEGIN RSA PRIVATE KEY-----
@@ -65,6 +75,7 @@ snakeoil_crt_variable_name_from_vault: |
     - role: nginx
       nginx_ssl_configuration:
         dhparam: "{{ dhparam_variable_name_from_vault }}"
+        trusted: "{{ trusted_variable_name_from_vault }}"
         snakeoil_key: "{{ snakeoil_key_variable_name_from_vault }}"
         snakeoil_crt: "{{ snakeoil_crt_variable_name_from_vault }}"
 ```
@@ -87,12 +98,13 @@ Short description here.
 | Param | Description |
 | -------- | -------- |
 | `dhparam` | dhparam |
+| `trusted` | Trusted CA certificates in the PEM format used to verify client certificates and OCSP responses if ssl_stapling is enabled |
 | `snakeoil_key` | Snakeoil key for default host |
 | `snakeoil_crt` | Snakeoil cert for default host |
 
 ## Useful links
 
-- [Official documentation](https://3proxy.ru/doc/)
+- [Official documentation](https://nginx.org/en/docs/)
 
 ## TODO
 

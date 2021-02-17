@@ -10,7 +10,10 @@
 }
 
 {% endfor %}
-{% for param in conf.params|default([]) %}{{ param }}{{ ';' if param[-1] != ';' else '' }}
+{% for param in conf.params|default([]) %}
+{% if param | length > 0 %}
+{{ param }}{{ ';' if param[-1] != ';' else '' }}
+{% endif %}
 {% endfor %}
 {% for upstream in conf.upstreams|default([]) %}upstream {{ upstream.name }} {
 {% for param in upstream.params|default([]) %}  {{ param }}{{ ';' if param[-1] != ';' else '' }}
