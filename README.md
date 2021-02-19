@@ -92,6 +92,7 @@ Short description here.
 | `pagespeed_module` | not defined | Install pagespeed module |
 | `snakeoil.common_name` | `localhost.localdomain` | Common name for snakeoil cert. |
 | `snakeoil.disable_validation` | `false` | Set this to `true` to disable snakeoil cert/key validation. |
+| `geoip2_module` | not defined | Install geoip2 module (you should already have GeoIP2 databases before installation) |
 
 ### SSL configuration dictionary (nginx_ssl_configuration)
 
@@ -110,7 +111,8 @@ Short description here.
 
 - simplify config generation
 - more examples
-- parameters docs
+- review params description
+- proper tests for geoip2
 
 ## License
 

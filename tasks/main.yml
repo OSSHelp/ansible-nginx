@@ -55,6 +55,10 @@
     conf: "{{ item }}"
   loop: "{{ default_confd }}"
 
+- name: geoip2 tasks
+  include_tasks: geoip2.yml
+  when: geoip2_module is defined and geoip2_module and ansible_distribution_release != "xenial"
+
 - name: cond.d configs deploy
   template:
     src: conf.j2

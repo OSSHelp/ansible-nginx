@@ -10,3 +10,9 @@
     deb: "{{ pagespeed_module_package }}"
   notify: reload nginx config
   when: pagespeed_module is defined and pagespeed_module
+
+- name: install geoip2 module
+  apt:
+    name: libnginx-mod-http-geoip2
+    update_cache: yes
+  when: geoip2_module is defined and geoip2_module and ansible_distribution_release != "xenial"

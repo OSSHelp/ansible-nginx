@@ -59,6 +59,7 @@ default_confd:
   - name: logs
     params:
       - log_format geo '$remote_addr {{ "$country_code/$city/$tz" if ip2geo else "-" }} $remote_user [$time_local] "$request" $status/$upstream_status/$upstream_cache_status $request_time/$upstream_response_time $request_length/$body_bytes_sent "$http_referer" "$http_user_agent" $connection/$connection_requests'
+      - "{{ geoip2_log_format if geoip2_module is defined and geoip2_module else '' }}"
       - access_log {{ log_dir }}/access.log geo
       - error_log {{ log_dir }}/error.log warn
 
@@ -130,7 +131,8 @@ default_vhosts:
           - stub_status on
 
 ip2geo_conf:
-  name: ip2geo
+  confname: ip2geo
+  name: geo
   geos:
     - var: $city_v4
       params:
@@ -169,3 +171,18 @@ ip2geo_conf:
       params:
         - default $tz_v4
         - '"" $tz_v6'
+
+geoip2_log_format: log_format weblog '$remote_addr $geoip2_data_country_code $remote_user $host [$time_local] "$request" $status $upstream_status $upstream_cache_status $request_time $upstream_response_time $request_length $body_bytes_sent $ssl_protocol $ssl_cipher "$http_referer" "$http_user_agent" $connection/$connection_requests'
+geoip2_conf:
+  confname: geoip2
+  name: geoip2
+  geos:
+    - var: /usr/share/GeoIP/GeoLite2-Country.mmdb
+      params:
+        - auto_reload 1h
+        - $geoip2_data_country_code default=XX source=$remote_addr country iso_code
+        - $geoip2_data_country_name country names en
+    - var: /usr/share/GeoIP/GeoLite2-City.mmdb
+      params:
+        - auto_reload 1h
+        - $geoip2_data_city_name default=UnknownCity city names e
