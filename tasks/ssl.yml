@@ -1,12 +1,40 @@
 ---
+- name: merge ssl params
+  set_fact:
+    ssl_params_merged:
+      - name: ssl
+        params: "{{ default_confd_ssl + confd_ssl_mode.old }}"
+  when: ssl_mode == 'old'
+
+- name: merge ssl params
+  set_fact:
+    ssl_params_merged:
+      - name: ssl
+        params: "{{ default_confd_ssl + confd_ssl_mode.intermediate }}"
+  when: ssl_mode == 'intermediate'
+
+- name: merge ssl params
+  set_fact:
+    ssl_params_merged:
+      - name: ssl
+        params: "{{ default_confd_ssl + confd_ssl_mode.modern }}"
+  when: ssl_mode == 'modern'
+
+- name: merge ssl params
+  set_fact:
+    ssl_params_merged:
+      - name: ssl
+        params: "{{ confd_ssl_mode.custom }}"
+  when: ssl_mode == 'custom'
+
 - name: default conf.d ssl config deploy
   template:
     src: conf.j2
-    dest: "{{ conf_dir }}/conf.d/{{ conf.name }}.conf"
+    dest: "{{ conf_dir }}/conf.d/ssl.conf"
   notify: reload nginx config
   vars:
     conf: "{{ item }}"
-  loop: "{{ default_confd_ssl }}"
+  loop: "{{ ssl_params_merged }}"
 
 - name: setup ssl
   block:
