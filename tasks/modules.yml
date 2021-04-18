@@ -15,4 +15,11 @@
   apt:
     name: libnginx-mod-http-geoip2
     update_cache: yes
+  notify: reload nginx config
   when: geoip2_module is defined and geoip2_module and ansible_distribution_release != "xenial"
+
+- name: "install push-stream module"
+  apt:
+    deb: "{{ push_stream_module_package }}"
+  notify: reload nginx config
+  when: push_stream_module is defined and push_stream_module

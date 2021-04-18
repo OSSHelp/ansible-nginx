@@ -33,6 +33,13 @@ Installs Nginx plus configuration management.
       pagespeed_module: true
 ```
 
+### Nginx + push-stream module
+
+```yaml
+    - role: nginx
+      push_stream_module: true
+```
+
 ### Nginx + dhparam, trusted and snakeoil key/cert from vault
 
 ```yaml
@@ -102,10 +109,13 @@ snakeoil_crt_variable_name_from_vault: |
 | -------- | -------- | -------- |
 | `vts_module` | not defined | Installs vts module |
 | `pagespeed_module` | not defined | Install pagespeed module |
+| `push_stream_module` | not defined | Install push-stream module |
 | `snakeoil.common_name` | `localhost.localdomain` | Common name for snakeoil cert. |
 | `snakeoil.disable_validation` | `false` | Set this to `true` to disable snakeoil cert/key validation. |
 | `geoip2_module` | not defined | Install geoip2 module (you should already have GeoIP2 databases before installation) |
 | `ssl_mode` | `old` | Sets the ssl mode according to the classification from the [Mozilla SSL Configuration Generator](https://ssl-config.mozilla.org/). You can use old, intermediate, modern and custom modes. For custom mode you must specify params, see usage example above. |
+| `nginx_set_real_ip_list` | `[]` | List of trusted addresses that are known to send correct replacement addresses |
+| `nginx_real_ip_header` | not defined | Defines the request header field whose value will be used to replace the client address |
 
 ### SSL configuration dictionary (nginx_ssl_configuration)
 

@@ -18,6 +18,11 @@ http {
 
 {% for param in http_params|default([]) %}  {{ param }}{{ ';' if param[-1] != '}' and param[-1] != ';' else '' }}
 {% endfor %}
+{% if nginx_real_ip_header is defined %}
+  real_ip_header {{ nginx_real_ip_header }};
+{% endif %}{% for ip in nginx_set_real_ip_list %}
+  set_real_ip_from {{ ip }};
+{% endfor %}
 
   include /etc/nginx/mime.types;
   default_type application/octet-stream;
