@@ -1,4 +1,4 @@
-{% for geo in conf.geos|default([]) %}{{conf.name}} {{ geo.var }} {
+{% for geo in conf.geos|default([]) %}{% if geo.name is not defined %}{{ conf.name }}{% else %}{{ geo.name }}{% endif %} {{ geo.var }} {
 {% for param in geo.params %}  {{ param }}{{ ';' if param[-1] != ';' else '' }}
 {% endfor %}
 }
